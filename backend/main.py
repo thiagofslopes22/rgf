@@ -389,12 +389,30 @@ def prefeitura_conciliacoes(
                 "id": c.id,
                 "tipo": c.tipo,
                 "total_divergencias": c.total_divergencias,
+                "por_severidade": c.por_severidade or {},
+                "por_anexo": c.por_anexo or {},
                 "status": c.status,
+                "arquivado": c.arquivado,
                 "criado_em": c.criado_em.isoformat(),
+                "criado_por_nome": c.usuario.nome if c.usuario else None,
             }
             for c in items
         ],
     }
+
+
+@app.patch("/conciliacoes/{conciliacao_id}/arquivar")
+def arquivar_conciliacao(
+    conciliacao_id: int,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    c = db.query(Conciliacao).filter(Conciliacao.id == conciliacao_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Conciliação não encontrada")
+    c.arquivado = not c.arquivado
+    db.commit()
+    return {"id": c.id, "arquivado": c.arquivado}
 
 
 # ─────────────────────────────────────────────────────────
@@ -416,7 +434,7 @@ def dashboard(
     for p in prefeituras:
         ultima = (
             db.query(Conciliacao)
-            .filter(Conciliacao.prefeitura_id == p.id)
+            .filter(Conciliacao.prefeitura_id == p.id, Conciliacao.arquivado == False)
             .order_by(desc(Conciliacao.criado_em))
             .first()
         )

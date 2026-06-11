@@ -45,6 +45,7 @@ class Conciliacao(Base):
     por_severidade = Column(JSON, nullable=True)
     por_anexo = Column(JSON, nullable=True)
     status = Column(String(50), default="concluida")  # sem_divergencias / com_divergencias / concluida
+    arquivado = Column(Boolean, default=False)
     criado_em = Column(DateTime, default=datetime.utcnow)
     criado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 

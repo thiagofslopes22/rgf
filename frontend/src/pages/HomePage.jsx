@@ -5,6 +5,7 @@ import {
   Search, Activity, PieChart, RefreshCw,
 } from 'lucide-react'
 import { api } from '../lib/api'
+import AuditoriaDrawer from '../components/AuditoriaDrawer'
 import './HomePage.css'
 
 const TIPO_ICONS = {
@@ -42,6 +43,7 @@ export default function HomePage() {
   const [data, setData] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [auditMunicipio, setAuditMunicipio] = useState(null)
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -126,6 +128,7 @@ export default function HomePage() {
   }
 
   return (
+    <>
     <div className="home">
 
       {/* ── Page header ── */}
@@ -361,7 +364,10 @@ export default function HomePage() {
                         }
                       </td>
                       <td>
-                        <button className="audit-btn">
+                        <button
+                          className="audit-btn"
+                          onClick={() => setAuditMunicipio(m)}
+                        >
                           <Search size={12} strokeWidth={2.5} />
                           Auditar
                         </button>
@@ -376,5 +382,13 @@ export default function HomePage() {
       </div>
 
     </div>
+
+    {auditMunicipio && (
+      <AuditoriaDrawer
+        municipio={auditMunicipio}
+        onClose={() => setAuditMunicipio(null)}
+      />
+    )}
+  </>
   )
 }
