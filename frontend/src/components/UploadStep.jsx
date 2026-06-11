@@ -1,16 +1,19 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { FileSpreadsheet, Upload, X, ArrowRight, Info } from 'lucide-react'
+import { FileSpreadsheet, Upload, X, ArrowRight, Info, Building2, ChevronDown } from 'lucide-react'
 import './UploadStep.css'
 
-function FileZone({ label, subtitle, file, onFile, onClear, accept }) {
+function FileZone({ label, subtitle, file, onFile, onClear }) {
   const onDrop = useCallback((accepted) => {
     if (accepted[0]) onFile(accepted[0])
   }, [onFile])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/vnd.ms-excel': ['.xls'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+    accept: {
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    },
     multiple: false,
   })
 
@@ -47,11 +50,17 @@ function FileZone({ label, subtitle, file, onFile, onClear, accept }) {
   )
 }
 
-export default function UploadStep({ onSubmit }) {
+export default function UploadStep({ onSubmit, prefeituras = [], selectedPrefeitura, onPrefeituraChange }) {
   const [rascunho, setRascunho] = useState(null)
   const [homologado, setHomologado] = useState(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const ready = rascunho && homologado
+  const ready = rascunho && homologado && selectedPrefeitura
+
+  function selectPrefeitura(p) {
+    onPrefeituraChange(p)
+    setDropdownOpen(false)
+  }
 
   return (
     <div className="upload-step">
@@ -65,6 +74,60 @@ export default function UploadStep({ onSubmit }) {
       </div>
 
       <div className="upload-card">
+
+        {/* Prefeitura selector */}
+        <div className="upload-prefeitura">
+          <div className="upload-prefeitura-label">
+            <Building2 size={14} />
+            <span>Prefeitura</span>
+            <span className="upload-prefeitura-required">*</span>
+          </div>
+
+          <div className="upload-prefeitura-select-wrap">
+            <button
+              type="button"
+              className={`upload-prefeitura-trigger ${selectedPrefeitura ? 'upload-prefeitura-trigger--selected' : ''}`}
+              onClick={() => setDropdownOpen(o => !o)}
+            >
+              {selectedPrefeitura ? (
+                <span className="upt-selected-label">
+                  {selectedPrefeitura.nome}
+                  <span className="upt-selected-uf">{selectedPrefeitura.uf}</span>
+                </span>
+              ) : (
+                <span className="upt-placeholder">Selecione a prefeitura…</span>
+              )}
+              <ChevronDown size={14} className={`upt-chevron ${dropdownOpen ? 'upt-chevron--open' : ''}`} />
+            </button>
+
+            {dropdownOpen && (
+              <div className="upt-dropdown">
+                {prefeituras.length === 0 ? (
+                  <div className="upt-empty">
+                    Nenhuma prefeitura cadastrada.{' '}
+                    <a href="/prefeituras">Cadastrar agora →</a>
+                  </div>
+                ) : (
+                  prefeituras.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`upt-option ${selectedPrefeitura?.id === p.id ? 'upt-option--active' : ''}`}
+                      onClick={() => selectPrefeitura(p)}
+                    >
+                      <span className="upt-option-nome">{p.nome}</span>
+                      <span className="upt-option-mun">{p.municipio} · {p.uf}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="upload-divider" />
+
+        {/* File zones */}
         <div className="upload-zones">
           <FileZone
             label="Rascunho MSC"
@@ -86,6 +149,13 @@ export default function UploadStep({ onSubmit }) {
             onClear={() => setHomologado(null)}
           />
         </div>
+
+        {!selectedPrefeitura && (rascunho || homologado) && (
+          <div className="upload-warn">
+            <Info size={13} />
+            <span>Selecione a prefeitura antes de processar.</span>
+          </div>
+        )}
 
         <button
           className={`btn-process ${ready ? 'btn-process--ready' : ''}`}
@@ -113,10 +183,10 @@ export default function UploadStep({ onSubmit }) {
 
 function HowItWorks() {
   const steps = [
-    { n: '01', title: 'Upload dos arquivos', desc: 'Envie o rascunho MSC e o arquivo homologado no SICONFI' },
-    { n: '02', title: 'Algoritmo de conciliação', desc: 'O sistema compara célula a célula, preservando o layout original' },
-    { n: '03', title: 'Marcação de divergências', desc: '6 níveis de criticidade com destaque de cor direto na célula' },
-    { n: '04', title: 'Download imediato', desc: 'Planilha .xlsx pronta para revisão, auditoria e correção' },
+    { n: '01', title: 'Selecione a prefeitura', desc: 'Escolha o município para vincular o resultado ao histórico' },
+    { n: '02', title: 'Upload dos arquivos', desc: 'Envie o rascunho MSC e o arquivo homologado no SICONFI' },
+    { n: '03', title: 'Algoritmo de conciliação', desc: 'O sistema compara célula a célula, preservando o layout original' },
+    { n: '04', title: 'Download imediato', desc: 'Planilha .xlsx pronta com divergências marcadas por criticidade' },
   ]
 
   return (
@@ -140,12 +210,12 @@ function HowItWorks() {
 
 function Legend() {
   const items = [
-    { color: '#ff3333', label: 'Crítica', desc: '> 20%' },
+    { color: '#ff3333', label: 'Crítica',       desc: '> 20%' },
     { color: '#ffaa00', label: 'Significativa', desc: '5–20%' },
-    { color: '#e6c800', label: 'Moderada', desc: '1–5%' },
-    { color: '#2e9e50', label: 'Baixa', desc: '< 1%' },
-    { color: '#86c98b', label: 'Mínima', desc: 'centavos' },
-    { color: '#2196f3', label: 'Ausente', desc: 'campo faltando' },
+    { color: '#e6c800', label: 'Moderada',      desc: '1–5%' },
+    { color: '#2e9e50', label: 'Baixa',         desc: '< 1%' },
+    { color: '#86c98b', label: 'Mínima',        desc: 'centavos' },
+    { color: '#2196f3', label: 'Ausente',       desc: 'campo faltando' },
   ]
 
   return (

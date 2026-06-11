@@ -1,0 +1,94 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.layout-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar-w);
+}
+
+.layout-main {
+  flex: 1;
+  padding: 40px 48px 48px;
+  max-width: 960px;
+  width: 100%;
+}
+
+.layout-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 48px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--surface);
+  letter-spacing: 0.01em;
+}
+
+/* Mobile top bar — hidden on desktop */
+.layout-topbar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 56px;
+  background: var(--dark);
+  border-bottom: 1px solid var(--dark-border);
+  flex-shrink: 0;
+}
+
+.layout-hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.layout-hamburger span {
+  display: block;
+  height: 1.5px;
+  background: var(--dark-text-2);
+  border-radius: 2px;
+  transition: opacity 0.15s;
+}
+
+.topbar-logo-img {
+  height: 20px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.layout-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .layout-body { margin-left: 0; }
+  .layout-topbar { display: flex; }
+  .layout-main { padding: 28px 24px 40px; }
+  .layout-footer { padding: 14px 24px; }
+  .layout-backdrop { display: block; }
+}
+
+@media (max-width: 480px) {
+  .layout-main { padding: 20px 16px 32px; }
+  .layout-footer { flex-direction: column; gap: 4px; text-align: center; }
+}

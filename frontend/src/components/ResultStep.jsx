@@ -10,7 +10,7 @@ const SEV_CONFIG = {
   'AUSENTE':       { color: '#2196f3', bg: '#eef7ff', label: 'Ausente',       icon: Info },
 }
 
-export default function ResultStep({ data, onReset }) {
+export default function ResultStep({ data, onReset, getToken }) {
   if (!data) return null
 
   const { job_id, stats } = data
@@ -20,8 +20,19 @@ export default function ResultStep({ data, onReset }) {
 
   const hasCritical = (sevs['CRÍTICA'] || 0) + (sevs['SIGNIFICATIVA'] || 0) > 0
 
-  function handleDownload() {
-    window.open(`/api/download/${job_id}`, '_blank')
+  async function handleDownload() {
+    const token = getToken ? getToken() : null
+    const res = await fetch(`/api/download/${job_id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!res.ok) return
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'RGF_Conciliado.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (

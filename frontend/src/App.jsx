@@ -1,62 +1,73 @@
-import { useState } from 'react'
-import Header from './components/Header.jsx'
-import UploadStep from './components/UploadStep.jsx'
-import ProcessingStep from './components/ProcessingStep.jsx'
-import ResultStep from './components/ResultStep.jsx'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import LoginPage from './pages/LoginPage'
+import HomePage from './pages/HomePage'
+import ConciliacaoPage from './pages/ConciliacaoPage'
+import AdminPage from './pages/AdminPage'
+import PrefeituraPage from './pages/PrefeituraPage'
+import Layout from './components/Layout'
 import './App.css'
 
-export default function App() {
-  const [step, setStep] = useState('upload') // upload | processing | result
-  const [jobData, setJobData] = useState(null)
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="app-loading" />
+  if (!user) return <Navigate to="/login" replace />
+  if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />
+  return children
+}
 
-  function handleStartProcessing(files) {
-    setStep('processing')
-    conciliar(files)
-  }
-
-  async function conciliar({ rascunho, homologado }) {
-    const form = new FormData()
-    form.append('rascunho', rascunho)
-    form.append('homologado', homologado)
-
-    try {
-      const res = await fetch('/api/conciliar', { method: 'POST', body: form })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || 'Erro no processamento')
-      }
-      const data = await res.json()
-      setJobData(data)
-      setStep('result')
-    } catch (e) {
-      alert('Erro: ' + e.message)
-      setStep('upload')
-    }
-  }
-
-  function handleReset() {
-    setJobData(null)
-    setStep('upload')
-  }
+function AppRoutes() {
+  const { user, loading } = useAuth()
 
   return (
-    <div className="app">
-      <Header />
-      <main className="main">
-        {step === 'upload'     && <UploadStep     onSubmit={handleStartProcessing} />}
-        {step === 'processing' && <ProcessingStep />}
-        {step === 'result'     && <ResultStep data={jobData} onReset={handleReset} />}
-      </main>
-      <Footer />
-    </div>
+    <Routes>
+      <Route
+        path="/login"
+        element={loading ? <div className="app-loading" /> : user ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout><HomePage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/conciliacao"
+        element={
+          <ProtectedRoute>
+            <Layout><ConciliacaoPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/prefeituras"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout><PrefeituraPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/usuarios"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout><AdminPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
-function Footer() {
+export default function App() {
   return (
-    <footer className="footer">
-      <span>RGF Conciliador — Kora</span>
-      <span>Pedro do Rosário / MA · 2025</span>
-    </footer>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

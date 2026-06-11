@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npm install *)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'c:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\frontend'; npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Start-Process \"http://localhost:5173\")",
+      "Bash(not exist *)",
+      "Bash(ls \"C:/Users/claud/.claude/\" 2>/dev/null || echo \"dir not found\")",
+      "Read(//c/Users/claud/.claude/**)",
+      "Bash(mkdir -p \"C:/Users/claud/.claude/commands\")",
+      "Bash(npm run *)",
+      "Bash(uvicorn main:app --host 0.0.0.0 --port 8000)",
+      "Bash(python -m uvicorn --version)",
+      "Bash(python -m uvicorn main:app --host 0.0.0.0 --port 8000)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(python -c \"import auth; print\\('auth OK'\\)\")",
+      "Read(//mnt/c/Users/claud/Desktop/rgf-conciliador/**)",
+      "Bash(python -c \"from auth import get_user; print\\('auth OK'\\)\")",
+      "Bash(curl -s -X POST http://localhost:8000/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"kora2025\"}')",
+      "Bash(curl -sv -X POST http://localhost:8000/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"kora2025\"}')",
+      "Bash(cd /mnt/c/Users/claud/Desktop/rgf-conciliador/backend)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "PowerShell(pip show bcrypt passlib 2>&1)",
+      "PowerShell(Start-Process -WindowStyle Hidden -FilePath \"python\" -ArgumentList \"-m\", \"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\" -WorkingDirectory \"C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend\")",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend'; uvicorn main:app --reload\" -WindowStyle Normal)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\frontend'; npm run dev\" -WindowStyle Normal)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend'; uvicorn main:app --host 0.0.0.0 --port 8000\" -WindowStyle Normal)",
+      "PowerShell(cd \"C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend\"; $job = Start-Job -ScriptBlock { cd \"C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend\"; python -m uvicorn main:app --host 0.0.0.0 --port 8000 2>&1 }; Start-Sleep -Seconds 5; Receive-Job $job; Remove-Job $job -Force)",
+      "PowerShell($proc = Start-Process -FilePath \"python\" -ArgumentList \"-m\", \"uvicorn\", \"main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\" -WorkingDirectory \"C:\\\\Users\\\\claud\\\\Desktop\\\\rgf-conciliador\\\\backend\" -PassThru -WindowStyle Normal; Write-Host \"PID: $\\($proc.Id\\)\")",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s \"http://localhost:5173/src/pages/HomePage.jsx\")",
+      "Bash(curl -s \"http://localhost:5173/src/pages/LoginPage.jsx\")",
+      "Bash(python -c \"import sqlalchemy; import alembic; print\\('sqlalchemy', sqlalchemy.__version__, '| alembic', alembic.__version__\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":5173\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\claud\\.claude"
+    ]
+  }
+}

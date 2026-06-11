@@ -1,31 +1,55 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --navy:       #0f1e3c;
-  --navy-mid:   #1b3060;
-  --blue:       #2356b6;
-  --blue-lt:    #3d72d9;
-  --accent:     #00c2a8;
-  --accent-dim: #00a08a;
-  --bg:         #f0f4fa;
-  --surface:    #ffffff;
-  --surface-2:  #f7f9fd;
-  --border:     #dde3ef;
-  --text:       #1a2540;
-  --text-2:     #5a6680;
-  --text-3:     #8a96b0;
+  /* Kora Brand */
+  --gold:          #FFD700;
+  --gold-dark:     #CCAC00;
+  --gold-light:    #FFE44D;
+  --gold-faint:    #FFFBE0;
+  --gold-rgb:      255, 215, 0;
 
-  --sev-critica:      #ff3333;
-  --sev-signif:       #ffaa00;
-  --sev-moderada:     #e6c800;
-  --sev-baixa:        #2e9e50;
-  --sev-minima:       #86c98b;
-  --sev-ausente:      #2196f3;
+  /* Dark surfaces — sidebar, login panel */
+  --dark:          #1C1C1E;
+  --dark-2:        #2A2A2D;
+  --dark-3:        #353538;
+  --dark-border:   rgba(255, 255, 255, 0.08);
+  --dark-text:     rgba(255, 255, 255, 0.92);
+  --dark-text-2:   rgba(255, 255, 255, 0.55);
+  --dark-text-3:   rgba(255, 255, 255, 0.28);
 
-  --radius:     10px;
-  --radius-lg:  16px;
-  --shadow:     0 2px 12px rgba(15,30,60,.08);
-  --shadow-lg:  0 8px 32px rgba(15,30,60,.14);
+  /* Light surfaces — main content */
+  --surface:       #FFFFFF;
+  --surface-2:     #F7F7F7;
+  --surface-3:     #F0F0F0;
+  --bg:            #F5F6F8;
+  --border:        #E4E5E9;
+  --border-2:      #CED0D7;
+
+  /* Text */
+  --text:          #1A1A1A;
+  --text-2:        #555555;
+  --text-3:        #999999;
+
+  /* Severity (functional — unchanged) */
+  --sev-critica:   #E53935;
+  --sev-signif:    #F57C00;
+  --sev-moderada:  #C9A800;
+  --sev-baixa:     #2E9E50;
+  --sev-minima:    #66BB6A;
+  --sev-ausente:   #1976D2;
+
+  /* Shape */
+  --radius-sm:     6px;
+  --radius:        8px;
+  --radius-lg:     12px;
+
+  /* Shadows — shadow-as-border technique */
+  --shadow-sm:     0 0 0 1px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow:        0 0 0 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg:     0 0 0 1px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.12);
+
+  /* Sidebar width */
+  --sidebar-w:     240px;
 }
 
 html { font-size: 16px; }
@@ -36,9 +60,13 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+button { cursor: pointer; font-family: inherit; }
+input  { font-family: inherit; }
