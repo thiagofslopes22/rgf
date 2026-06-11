@@ -29,6 +29,14 @@ JOBS: dict[str, dict] = {}
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    # Safe migrations for columns added after initial deploy
+    with engine.connect() as conn:
+        conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS arquivado BOOLEAN DEFAULT FALSE"
+            )
+        )
+        conn.commit()
     db = SessionLocal()
     try:
         seed_admin(db)
