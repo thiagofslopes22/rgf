@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { api } from '../lib/api'
 import logoBlanca from '../assets/logo-branca.svg'
 import './LoginPage.css'
 
@@ -17,11 +18,7 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
-      })
+      const res = await api.post('/auth/login', { email, senha })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.detail || 'Erro ao autenticar')

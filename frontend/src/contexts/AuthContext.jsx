@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { api } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -10,7 +11,7 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('kora_token')
     if (!token) { setLoading(false); return }
 
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    api.get('/auth/me')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) setUser(data)

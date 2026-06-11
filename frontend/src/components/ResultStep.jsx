@@ -1,4 +1,5 @@
 import { Download, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Info } from 'lucide-react'
+import { api } from '../lib/api'
 import './ResultStep.css'
 
 const SEV_CONFIG = {
@@ -21,10 +22,7 @@ export default function ResultStep({ data, onReset, getToken }) {
   const hasCritical = (sevs['CRÍTICA'] || 0) + (sevs['SIGNIFICATIVA'] || 0) > 0
 
   async function handleDownload() {
-    const token = getToken ? getToken() : null
-    const res = await fetch(`/api/download/${job_id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    const res = await api.get(`/download/${job_id}`)
     if (!res.ok) return
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
