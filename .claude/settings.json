@@ -37,7 +37,12 @@
       "Bash(curl -s \"http://localhost:5173/src/pages/LoginPage.jsx\")",
       "Bash(python -c \"import sqlalchemy; import alembic; print\\('sqlalchemy', sqlalchemy.__version__, '| alembic', alembic.__version__\\)\")",
       "Bash(netstat -ano)",
-      "Bash(findstr \":5173\")"
+      "Bash(findstr \":5173\")",
+      "Bash(grep -o \"rgf-production.up.railway.app\\\\|VITE_API_URL\\\\|\\\\/api\")",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(grep -rn \"\\\\/api\\\\|VITE_API\\\\|BASE\\\\|fetch\\\\|axios\" frontend/src/ --include=\"*.js\" --include=\"*.jsx\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\claud\\.claude"
