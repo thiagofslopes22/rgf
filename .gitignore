@@ -1,0 +1,34 @@
+# Build outputs
+frontend/dist/
+
+# pip install garbage (e.g. pip install pkg>=x.y.z run from wrong dir)
+backend/=*
+
+# Python
+backend/__pycache__/
+backend/*.pyc
+backend/**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Database local
+backend/kora.db
+backend/*.db
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vite / editor
+*.local
+.vscode/
+.idea/
