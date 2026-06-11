@@ -87,8 +87,8 @@ export default function PrefeituraPage() {
   async function toggleAtivo(p) {
     setTogglingId(p.id)
     try {
-      const res = await api.delete(`/prefeituras/${p.id}`)
-      if (res.ok || res.status === 204) await fetchPrefeituras()
+      const res = await api.patch(`/prefeituras/${p.id}/toggle`)
+      if (res.ok) await fetchPrefeituras()
     } finally {
       setTogglingId(null)
     }

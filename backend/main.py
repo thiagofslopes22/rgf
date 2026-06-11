@@ -222,6 +222,20 @@ def delete_prefeitura(
     db.commit()
 
 
+@app.patch("/prefeituras/{prefeitura_id}/toggle")
+def toggle_prefeitura(
+    prefeitura_id: int,
+    current_user: Usuario = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    p = db.query(Prefeitura).filter(Prefeitura.id == prefeitura_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
+    p.ativo = not p.ativo
+    db.commit()
+    return {"id": p.id, "ativo": p.ativo}
+
+
 # ─────────────────────────────────────────────────────────
 # Conciliação
 # ─────────────────────────────────────────────────────────
