@@ -218,7 +218,8 @@ def delete_prefeitura(
     p = db.query(Prefeitura).filter(Prefeitura.id == prefeitura_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
-    p.ativo = False
+    db.query(Conciliacao).filter(Conciliacao.prefeitura_id == prefeitura_id).delete()
+    db.delete(p)
     db.commit()
 
 

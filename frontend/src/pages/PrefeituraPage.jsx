@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Building2, Plus, Pencil, PowerOff, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Building2, Plus, Pencil, PowerOff, Trash2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { api } from '../lib/api'
 import './PrefeituraPage.css'
 
@@ -18,6 +18,8 @@ export default function PrefeituraPage() {
   const [formSuccess, setFormSuccess] = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   async function fetchPrefeituras() {
     setLoading(true)
@@ -81,6 +83,19 @@ export default function PrefeituraPage() {
       setFormError(e.message)
     } finally {
       setFormLoading(false)
+    }
+  }
+
+  async function handleDelete(id) {
+    setDeletingId(id)
+    try {
+      const res = await api.delete(`/prefeituras/${id}`)
+      if (res.ok || res.status === 204) {
+        setConfirmDeleteId(null)
+        await fetchPrefeituras()
+      }
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -239,6 +254,34 @@ export default function PrefeituraPage() {
                         >
                           <PowerOff size={13} />
                         </button>
+                        {confirmDeleteId === p.id ? (
+                          <div className="pref-confirm-delete">
+                            <span className="pref-confirm-label">Excluir?</span>
+                            <button
+                              className="pref-action-btn pref-action-btn--danger"
+                              onClick={() => handleDelete(p.id)}
+                              disabled={deletingId === p.id}
+                              title="Confirmar exclusão"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                            <button
+                              className="pref-action-btn"
+                              onClick={() => setConfirmDeleteId(null)}
+                              title="Cancelar"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="pref-action-btn pref-action-btn--danger-idle"
+                            onClick={() => setConfirmDeleteId(p.id)}
+                            title="Excluir permanentemente"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
