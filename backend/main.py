@@ -27,21 +27,24 @@ app.add_middleware(
 JOBS: dict[str, dict] = {}
 
 
+def _add_column_if_missing(conn, col: str, definition: str):
+    """Adds a column to conciliacoes if it doesn't already exist (SQLite + PostgreSQL safe)."""
+    import sqlalchemy as sa
+    if engine.dialect.name == "sqlite":
+        existing = [r[1] for r in conn.execute(sa.text("PRAGMA table_info(conciliacoes)")).fetchall()]
+        if col in existing:
+            return
+        conn.execute(sa.text(f"ALTER TABLE conciliacoes ADD COLUMN {col} {definition}"))
+    else:
+        conn.execute(sa.text(f"ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS {col} {definition}"))
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
-    # Safe migrations for columns added after initial deploy
     with engine.connect() as conn:
-        conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS arquivado BOOLEAN DEFAULT FALSE"
-            )
-        )
-        conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS arquivo_auditoria VARCHAR(255)"
-            )
-        )
+        _add_column_if_missing(conn, "arquivado", "BOOLEAN DEFAULT FALSE")
+        _add_column_if_missing(conn, "arquivo_auditoria", "VARCHAR(255)")
         conn.commit()
     db = SessionLocal()
     try:

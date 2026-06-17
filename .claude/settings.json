@@ -42,7 +42,10 @@
       "Bash(git rm *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(grep -rn \"\\\\/api\\\\|VITE_API\\\\|BASE\\\\|fetch\\\\|axios\" frontend/src/ --include=\"*.js\" --include=\"*.jsx\")"
+      "Bash(grep -rn \"\\\\/api\\\\|VITE_API\\\\|BASE\\\\|fetch\\\\|axios\" frontend/src/ --include=\"*.js\" --include=\"*.jsx\")",
+      "Bash(python -m pytest tests/test_conciliador_rreo.py -v -k \"not regressao and not todos_anexos and not arquivo_saida and not arquivo_auditoria and not aba_divergencias and not celula_conhecida and not avisos_quando\")",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -WindowStyle Hidden)",
+      "PowerShell(docker info 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\claud\\.claude"

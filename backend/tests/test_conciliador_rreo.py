@@ -14,6 +14,7 @@ coloque os arquivos reais em:
 """
 
 import os
+import shutil
 import sys
 
 import pytest
@@ -26,7 +27,16 @@ MSC = os.path.join(FIXTURES, "rascunho_RREO_2026.xls")
 SICONFI = os.path.join(FIXTURES, "SICONFI_RREO_1517_BIMESTRAL_2_2026.xls")
 
 FIXTURES_EXIST = os.path.exists(MSC) and os.path.exists(SICONFI)
-needs_fixtures = pytest.mark.skipif(not FIXTURES_EXIST, reason="Fixtures de regressão não encontradas em tests/fixtures/")
+SOFFICE_AVAILABLE = shutil.which("soffice") is not None
+needs_fixtures = pytest.mark.skipif(
+    not (FIXTURES_EXIST and SOFFICE_AVAILABLE),
+    reason=(
+        "Fixtures não encontradas em tests/fixtures/" if not FIXTURES_EXIST
+        else "LibreOffice (soffice) não encontrado neste ambiente — "
+             "estes testes precisam dele para converter .xls -> .xlsx. "
+             "Rodam normalmente no Docker/Railway."
+    )
+)
 
 
 @pytest.fixture(scope="module")
