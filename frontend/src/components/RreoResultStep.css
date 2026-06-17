@@ -1,0 +1,347 @@
+/* ═══════════════════════════════════════════════════════
+   RREO RESULT STEP
+   Authority × Data Density — extends the established
+   shadow-as-border, gold accent, tabular-nums system.
+   ═══════════════════════════════════════════════════════ */
+
+.rreo-result {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hero ──────────────────────────────────────────────── */
+.rreo-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--surface, #fff);
+  border-radius: var(--radius-lg, 10px);
+  padding: 22px 24px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.rreo-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rreo-icon--ok   { background: #F0FDF4; color: #16A34A; }
+.rreo-icon--warn { background: #FFF7ED; color: #D97706; }
+
+.rreo-hero-text { flex: 1; min-width: 0; }
+
+.rreo-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text, #1A1A1A);
+  letter-spacing: -0.025em;
+  margin-bottom: 3px;
+}
+
+.rreo-subtitle { font-size: 13px; color: var(--text-2, #555); }
+
+.rreo-total-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--gold-faint, #FFFBE0);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: var(--radius, 8px);
+  padding: 10px 16px;
+  min-width: 68px;
+}
+.rreo-total-n {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gold-dark, #CCAC00);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.rreo-total-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-3, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+}
+
+/* ── Avisos ────────────────────────────────────────────── */
+.rreo-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--gold-faint, #FFFBE0);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: var(--radius, 8px);
+  padding: 12px 14px;
+}
+
+.rreo-aviso-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2, #555);
+  line-height: 1.55;
+}
+.rreo-aviso-row svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--gold-dark, #CCAC00);
+}
+
+/* ── Section wrapper ──────────────────────────────────── */
+.rreo-section {
+  background: var(--surface, #fff);
+  border-radius: var(--radius-lg, 10px);
+  padding: 18px 20px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rreo-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rreo-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #1A1A1A);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rreo-section-pill {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3, #999);
+  background: var(--surface-2, #F7F7F7);
+  border: 1px solid var(--border, #E4E5E9);
+  border-radius: 20px;
+  padding: 1px 8px;
+}
+
+/* ── Severity grid ─────────────────────────────────────── */
+.rreo-sev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.rreo-sev-card {
+  background: var(--sbg);
+  border: 1px solid color-mix(in srgb, var(--sc) 20%, transparent);
+  border-radius: var(--radius, 8px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rreo-sev-icon { color: var(--sc); flex-shrink: 0; }
+
+.rreo-sev-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rreo-sev-n {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--sc);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.rreo-sev-lbl {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2, #555);
+  white-space: nowrap;
+}
+
+.rreo-sev-track {
+  height: 3px;
+  background: color-mix(in srgb, var(--sc) 14%, transparent);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rreo-sev-bar {
+  height: 100%;
+  background: var(--sc);
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Anexo list ────────────────────────────────────────── */
+.rreo-anexo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.rreo-anexo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rreo-anexo-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text, #1A1A1A);
+  width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.rreo-anexo-track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface-2, #F7F7F7);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border, #E4E5E9);
+}
+
+.rreo-anexo-bar {
+  height: 100%;
+  background: var(--gold, #FFD700);
+  border-radius: 3px;
+  min-width: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rreo-anexo-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text, #1A1A1A);
+  font-variant-numeric: tabular-nums;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Download buttons ──────────────────────────────────── */
+.rreo-downloads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Primary — gold, for the spreadsheet (the correction tool) */
+.rreo-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--radius, 8px);
+  border: none;
+  background: var(--gold, #FFD700);
+  color: var(--dark, #1C1C1E);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.16s, box-shadow 0.16s;
+  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.28);
+}
+.rreo-btn-primary:hover {
+  background: var(--gold-dark, #CCAC00);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
+}
+.rreo-btn-primary svg { flex-shrink: 0; }
+
+/* Secondary — outlined, for the audit report (the presentation tool) */
+.rreo-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--radius, 8px);
+  border: 1.5px solid var(--border, #E4E5E9);
+  background: var(--surface, #fff);
+  color: var(--text, #1A1A1A);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s, color 0.16s, background 0.16s;
+}
+.rreo-btn-secondary:hover {
+  border-color: var(--gold, #FFD700);
+  color: var(--gold-dark, #CCAC00);
+  background: var(--gold-faint, #FFFBE0);
+}
+.rreo-btn-secondary svg { flex-shrink: 0; }
+
+.rreo-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.rreo-btn-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.rreo-btn-sub {
+  font-size: 11.5px;
+  font-weight: 400;
+  opacity: 0.65;
+  line-height: 1.3;
+}
+.rreo-btn-primary .rreo-btn-sub { opacity: 0.7; }
+
+/* ── Footer ────────────────────────────────────────────── */
+.rreo-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rreo-btn-reset {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius, 8px);
+  border: 1.5px solid var(--border, #E4E5E9);
+  background: var(--surface, #fff);
+  color: var(--text-2, #555);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: border-color 0.14s, color 0.14s;
+}
+.rreo-btn-reset:hover {
+  border-color: var(--gold, #FFD700);
+  color: var(--gold-dark, #CCAC00);
+}
+
+.rreo-tip {
+  font-size: 12px;
+  color: var(--text-3, #999);
+  line-height: 1.6;
+  padding: 11px 13px;
+  background: var(--gold-faint, #FFFBE0);
+  border: 1px solid rgba(255, 215, 0, 0.18);
+  border-radius: var(--radius, 8px);
+}

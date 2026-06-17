@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileSpreadsheet, Users, Building2, ChevronDown, LogOut, Clock } from 'lucide-react'
+import { LayoutDashboard, FileSpreadsheet, Users, Building2, ChevronDown, LogOut, Clock } from 'lucide-react' // eslint-disable-line no-unused-vars
 import { useAuth } from '../contexts/AuthContext'
 import logoBlanca from '../assets/logo-branca.svg'
 import './Sidebar.css'
@@ -12,10 +12,15 @@ const CONCILIACOES = [
     ],
   },
   {
+    group: 'RREO',
+    items: [
+      { label: 'RREO vs Homologado', to: '/conciliacao-rreo', icon: FileSpreadsheet, available: true },
+    ],
+  },
+  {
     group: 'Em breve',
     items: [
-      { label: 'RREO vs Homologado', to: null, icon: Clock, available: false },
-      { label: 'LRF vs Publicado',   to: null, icon: Clock, available: false },
+      { label: 'LRF vs Publicado', to: null, icon: Clock, available: false },
     ],
   },
 ]

@@ -41,6 +41,7 @@ class Conciliacao(Base):
     tipo = Column(String(50), default="RGF_SIMPLIFICADO")  # RGF_SIMPLIFICADO / RREO / LRF
     arquivo_rascunho = Column(String(255), nullable=True)
     arquivo_homologado = Column(String(255), nullable=True)
+    arquivo_auditoria = Column(String(255), nullable=True)
     total_divergencias = Column(Integer, default=0)
     por_severidade = Column(JSON, nullable=True)
     por_anexo = Column(JSON, nullable=True)

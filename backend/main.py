@@ -13,6 +13,7 @@ from database import engine, SessionLocal, get_db
 from models import Base, Usuario, Prefeitura, Conciliacao
 from auth import get_current_user, require_admin, create_access_token, verify_password, hash_password, seed_admin
 from conciliador import conciliar as _conciliar
+from conciliador_rreo import conciliar_rreo as _conciliar_rreo
 
 app = FastAPI(title="Kora — Auditoria Contábil Municipal", version="3.0.0")
 
@@ -34,6 +35,11 @@ def on_startup():
         conn.execute(
             __import__("sqlalchemy").text(
                 "ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS arquivado BOOLEAN DEFAULT FALSE"
+            )
+        )
+        conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS arquivo_auditoria VARCHAR(255)"
             )
         )
         conn.commit()
@@ -322,6 +328,107 @@ def download(job_id: str, current_user: Usuario = Depends(get_current_user)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename="RGF_Conciliado.xlsx",
     )
+
+
+@app.get("/download-auditoria/{job_id}")
+def download_auditoria(job_id: str, current_user: Usuario = Depends(get_current_user)):
+    job = JOBS.get(job_id)
+    if not job or not job.get("audit_path"):
+        raise HTTPException(status_code=404, detail="Relatório de auditoria não encontrado")
+    return FileResponse(
+        job["audit_path"],
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="RREO_Relatorio_Auditoria.xlsx",
+    )
+
+
+@app.post("/conciliar-rreo")
+async def conciliar_rreo_endpoint(
+    rascunho_msc: UploadFile = File(...),
+    siconfi_homologado: UploadFile = File(...),
+    prefeitura_id: int = Form(...),
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    prefeitura = db.query(Prefeitura).filter(
+        Prefeitura.id == prefeitura_id, Prefeitura.ativo == True
+    ).first()
+    if not prefeitura:
+        raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
+
+    for upload in (rascunho_msc, siconfi_homologado):
+        ext = os.path.splitext(upload.filename or "")[1].lower()
+        if ext not in (".xls", ".xlsx"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Formato não suportado: '{upload.filename}'. "
+                       "Confirme se é um .xls ou .xlsx exportado do SICONFI/MSC.",
+            )
+
+    job_id = str(uuid.uuid4())
+    tmp_dir = tempfile.mkdtemp()
+
+    try:
+        r_path = os.path.join(tmp_dir, f"rascunho_{rascunho_msc.filename}")
+        h_path = os.path.join(tmp_dir, f"siconfi_{siconfi_homologado.filename}")
+
+        with open(r_path, "wb") as f:
+            f.write(await rascunho_msc.read())
+        with open(h_path, "wb") as f:
+            f.write(await siconfi_homologado.read())
+
+        out_path = os.path.join(tmp_dir, f"rreo_conciliado_{job_id}.xlsx")
+        audit_path = os.path.join(tmp_dir, f"rreo_auditoria_{job_id}.xlsx")
+
+        resultado = _conciliar_rreo(r_path, h_path, out_path, audit_path, workdir=tmp_dir)
+        result_dict = resultado.to_dict()
+
+        por_classificacao = result_dict.get("por_classificacao", {})
+        total_div = result_dict.get("total_divergencias", 0)
+        criticas = por_classificacao.get("CRÍTICA", 0)
+
+        if total_div == 0:
+            status_conc = "sem_divergencias"
+        elif criticas > 0:
+            status_conc = "com_divergencias"
+        else:
+            status_conc = "concluida"
+
+        conc = Conciliacao(
+            prefeitura_id=prefeitura_id,
+            tipo="RREO",
+            arquivo_rascunho=rascunho_msc.filename,
+            arquivo_homologado=siconfi_homologado.filename,
+            arquivo_auditoria=audit_path,
+            total_divergencias=total_div,
+            por_severidade=por_classificacao,
+            por_anexo=result_dict.get("por_sheet"),
+            status=status_conc,
+            criado_por=current_user.id,
+        )
+        db.add(conc)
+        db.commit()
+        db.refresh(conc)
+
+        JOBS[job_id] = {
+            "status": "ok",
+            "path": out_path,
+            "audit_path": audit_path,
+            "tmp_dir": tmp_dir,
+            "stats": result_dict,
+        }
+        return {
+            "job_id": job_id,
+            "stats": result_dict,
+            "conciliacao_id": conc.id,
+        }
+
+    except HTTPException:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise
+    except Exception as e:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/conciliacoes")

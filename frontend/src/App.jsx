@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ConciliacaoPage from './pages/ConciliacaoPage'
+import RreoConciliacaoPage from './pages/RreoConciliacaoPage'
 import AdminPage from './pages/AdminPage'
 import PrefeituraPage from './pages/PrefeituraPage'
 import Layout from './components/Layout'
@@ -38,6 +39,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout><ConciliacaoPage /></Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/conciliacao-rreo"
+        element={
+          <ProtectedRoute>
+            <Layout><RreoConciliacaoPage /></Layout>
           </ProtectedRoute>
         }
       />

@@ -50,7 +50,15 @@ function FileZone({ label, subtitle, file, onFile, onClear }) {
   )
 }
 
-export default function UploadStep({ onSubmit, prefeituras = [], selectedPrefeitura, onPrefeituraChange }) {
+export default function UploadStep({
+  onSubmit,
+  prefeituras = [],
+  selectedPrefeitura,
+  onPrefeituraChange,
+  titulo = 'Conciliação RGF Simplificado',
+  descricao = 'Envie o rascunho gerado pelo sistema MSC e o arquivo homologado no SICONFI. O sistema compara automaticamente todas as células e gera uma planilha com as divergências marcadas diretamente no layout original.',
+  btnLabel = 'Gerar planilha conciliada',
+}) {
   const [rascunho, setRascunho] = useState(null)
   const [homologado, setHomologado] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -65,12 +73,8 @@ export default function UploadStep({ onSubmit, prefeituras = [], selectedPrefeit
   return (
     <div className="upload-step">
       <div className="upload-hero">
-        <h1 className="upload-title">Conciliação RGF Simplificado</h1>
-        <p className="upload-desc">
-          Envie o rascunho gerado pelo sistema MSC e o arquivo homologado no SICONFI.
-          O sistema compara automaticamente todas as células e gera uma planilha com as
-          divergências marcadas diretamente no layout original.
-        </p>
+        <h1 className="upload-title">{titulo}</h1>
+        <p className="upload-desc">{descricao}</p>
       </div>
 
       <div className="upload-card">
@@ -162,7 +166,7 @@ export default function UploadStep({ onSubmit, prefeituras = [], selectedPrefeit
           disabled={!ready}
           onClick={() => onSubmit({ rascunho, homologado })}
         >
-          <span>Gerar planilha conciliada</span>
+          <span>{btnLabel}</span>
           <ArrowRight size={18} />
         </button>
       </div>
