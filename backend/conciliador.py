@@ -143,13 +143,22 @@ def _xlrd_border(wb_x, xf_idx) -> Border:
 
 
 def _open_xls(path: str):
-    """Open any xls/xlsx file with xlrd (formatting_info for .xls)."""
-    ext = os.path.splitext(path)[1].lower()
-    if ext == ".xls":
-        return xlrd.open_workbook(path, formatting_info=True)
-    # xlrd 2.x dropped xlsx support; fall back to openpyxl data-only for xlsx
-    # but we need xlrd for formatting — caller must pass .xls for rascunho
-    return xlrd.open_workbook(path, formatting_info=True)
+    """Open .xls with xlrd (formatting_info=True). Falls back via msoffcrypto if BIFF8-encrypted."""
+    import io
+    with open(path, "rb") as f:
+        raw = f.read()
+    try:
+        return xlrd.open_workbook(file_contents=raw, formatting_info=True)
+    except Exception as e:
+        if "encrypted" not in str(e).lower():
+            raise
+    import msoffcrypto
+    buf = io.BytesIO(raw)
+    office = msoffcrypto.OfficeFile(buf)
+    out = io.BytesIO()
+    office.decrypt("", out)
+    out.seek(0)
+    return xlrd.open_workbook(file_contents=out.read(), formatting_info=True)
 
 
 # ── Legend sheet ─────────────────────────────────────────────────────
@@ -229,12 +238,24 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
     h_ext = os.path.splitext(homologado_path)[1].lower()
 
     # Load rascunho with xlrd (need formatting)
-    r_wb_x = xlrd.open_workbook(rascunho_path, formatting_info=True)
+    r_wb_x = _open_xls(rascunho_path)
 
     # Load homologado with pandas (only values needed)
     engine_h = "xlrd" if h_ext == ".xls" else "openpyxl"
-    s_df_all = pd.read_excel(homologado_path, engine=engine_h,
-                              sheet_name=None, header=None)
+    try:
+        s_df_all = pd.read_excel(homologado_path, engine=engine_h,
+                                  sheet_name=None, header=None)
+    except Exception as e:
+        if "encrypted" not in str(e).lower() or h_ext != ".xls":
+            raise
+        import io, msoffcrypto
+        with open(homologado_path, "rb") as f:
+            buf = io.BytesIO(f.read())
+        office = msoffcrypto.OfficeFile(buf)
+        out = io.BytesIO()
+        office.decrypt("", out)
+        out.seek(0)
+        s_df_all = pd.read_excel(out, engine=engine_h, sheet_name=None, header=None)
 
     sheet_names = r_wb_x.sheet_names()
 
