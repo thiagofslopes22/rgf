@@ -461,7 +461,15 @@ def _carregar_para_comparacao(path: str) -> tuple[dict[str, dict], str]:
     out: dict[str, dict] = {}
 
     if ext == ".xls":
-        book = xlrd.open_workbook(path)
+        try:
+            book = xlrd.open_workbook(path)
+        except Exception as e:
+            if "encrypted" in str(e).lower():
+                import tempfile
+                with tempfile.TemporaryDirectory() as tmp:
+                    xlsx_path = _ensure_xlsx(path, tmp)
+                    return _carregar_para_comparacao(xlsx_path)
+            raise
         for sheet_name in book.sheet_names():
             sheet = book.sheet_by_name(sheet_name)
             grid = [
