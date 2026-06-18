@@ -143,7 +143,7 @@ def _xlrd_border(wb_x, xf_idx) -> Border:
 
 
 def _open_xls(path: str):
-    """Open .xls with xlrd (formatting_info=True). Falls back via msoffcrypto if BIFF8-encrypted."""
+    """Open .xls with xlrd (formatting_info=True). Falls back via LibreOffice if encrypted."""
     import io
     with open(path, "rb") as f:
         raw = f.read()
@@ -152,14 +152,25 @@ def _open_xls(path: str):
     except Exception as e:
         if "encrypted" not in str(e).lower():
             raise
-    import msoffcrypto
-    buf = io.BytesIO(raw)
-    office = msoffcrypto.OfficeFile(buf)
-    office.load_key(password="")
-    out = io.BytesIO()
-    office.decrypt(out)
-    out.seek(0)
-    return xlrd.open_workbook(file_contents=out.read(), formatting_info=True)
+    # Encrypted — LibreOffice strips the encryption (xls→xls), then xlrd reads normally
+    import tempfile, subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, os.path.basename(path))
+        with open(src, "wb") as f:
+            f.write(raw)
+        proc = subprocess.run(
+            ["soffice", "--headless", "--convert-to", "xls", "--outdir", tmp, src],
+            capture_output=True, text=True, timeout=120,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"LibreOffice falhou ao desencriptar arquivo: {proc.stderr or proc.stdout}")
+        base = os.path.splitext(os.path.basename(path))[0]
+        converted = os.path.join(tmp, f"{base}.xls")
+        if not os.path.exists(converted):
+            raise RuntimeError(f"LibreOffice não gerou o arquivo esperado: {converted}")
+        with open(converted, "rb") as f:
+            conv_raw = f.read()
+    return xlrd.open_workbook(file_contents=conv_raw, formatting_info=True)
 
 
 # ── Legend sheet ─────────────────────────────────────────────────────
@@ -249,15 +260,24 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
     except Exception as e:
         if "encrypted" not in str(e).lower() or h_ext != ".xls":
             raise
-        import io, msoffcrypto
+        import io, tempfile, subprocess
         with open(homologado_path, "rb") as f:
-            buf = io.BytesIO(f.read())
-        office = msoffcrypto.OfficeFile(buf)
-        office.load_key(password="")
-        out = io.BytesIO()
-        office.decrypt(out)
-        out.seek(0)
-        s_df_all = pd.read_excel(out, engine=engine_h, sheet_name=None, header=None)
+            raw_h = f.read()
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, os.path.basename(homologado_path))
+            with open(src, "wb") as f:
+                f.write(raw_h)
+            proc = subprocess.run(
+                ["soffice", "--headless", "--convert-to", "xls", "--outdir", tmp, src],
+                capture_output=True, text=True, timeout=120,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(f"LibreOffice falhou: {proc.stderr or proc.stdout}")
+            base = os.path.splitext(os.path.basename(homologado_path))[0]
+            converted = os.path.join(tmp, f"{base}.xls")
+            with open(converted, "rb") as f:
+                conv_raw_h = f.read()
+        s_df_all = pd.read_excel(io.BytesIO(conv_raw_h), engine=engine_h, sheet_name=None, header=None)
 
     sheet_names = r_wb_x.sheet_names()
 
