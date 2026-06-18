@@ -21,7 +21,7 @@ import os
 import numpy as np
 import pandas as pd
 import xlrd
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.comments import Comment
@@ -142,9 +142,74 @@ def _xlrd_border(wb_x, xf_idx) -> Border:
     )
 
 
+# ── openpyxl formatting helpers (fallback para .xls BIFF8-obfuscated) ─
+def _opxl_bg(cell) -> str | None:
+    fill = cell.fill
+    if fill and fill.fill_type == "solid" and fill.fgColor:
+        rgb = fill.fgColor.rgb  # "FFRRGGBB"
+        if rgb and rgb not in ("00000000", "FF000000"):
+            return rgb
+    return None
+
+
+def _opxl_font(cell) -> dict:
+    f = cell.font
+    color = "FF000000"
+    if f and f.color and f.color.type == "rgb":
+        color = f.color.rgb
+    return dict(
+        name=(f.name if f and f.name else "Arial"),
+        size=(f.size if f and f.size else 10),
+        bold=bool(f.bold if f else False),
+        italic=bool(f.italic if f else False),
+        color=color,
+    )
+
+
+def _opxl_align(cell) -> dict:
+    a = cell.alignment
+    return dict(
+        horizontal=(a.horizontal or "general") if a else "general",
+        vertical=(a.vertical or "bottom") if a else "bottom",
+        wrap=bool(a.wrap_text if a else False),
+    )
+
+
+def _opxl_numfmt(cell) -> str:
+    return cell.number_format or "General"
+
+
+def _opxl_border(cell) -> Border:
+    b = cell.border
+    if not b:
+        return Border()
+    STYLES = {
+        None: None, "thin": "thin", "medium": "medium", "thick": "thick",
+        "dashed": "dashed", "dotted": "dotted", "double": "double",
+        "hair": "hair", "mediumDashed": "mediumDashed",
+        "dashDot": "dashDot", "mediumDashDot": "mediumDashDot",
+        "dashDotDot": "dashDotDot", "mediumDashDotDot": "mediumDashDotDot",
+        "slantDashDot": "slantDashDot",
+    }
+
+    def _side(s):
+        if not s or not s.border_style:
+            return Side(style=None)
+        st = STYLES.get(s.border_style, "thin")
+        color = "FF000000"
+        if s.color and s.color.type == "rgb":
+            color = s.color.rgb
+        return Side(style=st, color=color)
+
+    return Border(
+        left=_side(b.left), right=_side(b.right),
+        top=_side(b.top), bottom=_side(b.bottom),
+    )
+
+
 def _open_xls(path: str):
-    """Open .xls with xlrd (formatting_info=True). Falls back via LibreOffice if encrypted."""
-    import io
+    """Open .xls with xlrd (formatting_info=True).
+    Falls back to LibreOffice→xlsx→openpyxl when BIFF8 XOR obfuscation is detected."""
     with open(path, "rb") as f:
         raw = f.read()
     try:
@@ -152,25 +217,23 @@ def _open_xls(path: str):
     except Exception as e:
         if "encrypted" not in str(e).lower():
             raise
-    # Encrypted — LibreOffice strips the encryption (xls→xls), then xlrd reads normally
+    # BIFF8 XOR obfuscation — convert to xlsx (OOXML strips the obfuscation)
     import tempfile, subprocess
     with tempfile.TemporaryDirectory() as tmp:
         src = os.path.join(tmp, os.path.basename(path))
         with open(src, "wb") as f:
             f.write(raw)
         proc = subprocess.run(
-            ["soffice", "--headless", "--convert-to", "xls", "--outdir", tmp, src],
+            ["soffice", "--headless", "--convert-to", "xlsx", "--outdir", tmp, src],
             capture_output=True, text=True, timeout=120,
         )
         if proc.returncode != 0:
-            raise RuntimeError(f"LibreOffice falhou ao desencriptar arquivo: {proc.stderr or proc.stdout}")
+            raise RuntimeError(f"LibreOffice falhou ao converter arquivo: {proc.stderr or proc.stdout}")
         base = os.path.splitext(os.path.basename(path))[0]
-        converted = os.path.join(tmp, f"{base}.xls")
+        converted = os.path.join(tmp, f"{base}.xlsx")
         if not os.path.exists(converted):
             raise RuntimeError(f"LibreOffice não gerou o arquivo esperado: {converted}")
-        with open(converted, "rb") as f:
-            conv_raw = f.read()
-    return xlrd.open_workbook(file_contents=conv_raw, formatting_info=True)
+        return load_workbook(converted)  # openpyxl.Workbook
 
 
 # ── Legend sheet ─────────────────────────────────────────────────────
@@ -249,8 +312,9 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
     r_ext = os.path.splitext(rascunho_path)[1].lower()
     h_ext = os.path.splitext(homologado_path)[1].lower()
 
-    # Load rascunho with xlrd (need formatting)
+    # Load rascunho — xlrd normal, openpyxl como fallback para BIFF8 obfuscated
     r_wb_x = _open_xls(rascunho_path)
+    _using_openpyxl = not isinstance(r_wb_x, xlrd.Book)
 
     # Load homologado with pandas (only values needed)
     engine_h = "xlrd" if h_ext == ".xls" else "openpyxl"
@@ -268,18 +332,19 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
             with open(src, "wb") as f:
                 f.write(raw_h)
             proc = subprocess.run(
-                ["soffice", "--headless", "--convert-to", "xls", "--outdir", tmp, src],
+                ["soffice", "--headless", "--convert-to", "xlsx", "--outdir", tmp, src],
                 capture_output=True, text=True, timeout=120,
             )
             if proc.returncode != 0:
                 raise RuntimeError(f"LibreOffice falhou: {proc.stderr or proc.stdout}")
             base = os.path.splitext(os.path.basename(homologado_path))[0]
-            converted = os.path.join(tmp, f"{base}.xls")
+            converted = os.path.join(tmp, f"{base}.xlsx")
             with open(converted, "rb") as f:
                 conv_raw_h = f.read()
-        s_df_all = pd.read_excel(io.BytesIO(conv_raw_h), engine=engine_h, sheet_name=None, header=None)
+        s_df_all = pd.read_excel(io.BytesIO(conv_raw_h), engine="openpyxl",
+                                  sheet_name=None, header=None)
 
-    sheet_names = r_wb_x.sheet_names()
+    sheet_names = r_wb_x.sheetnames if _using_openpyxl else r_wb_x.sheet_names()
 
     wb_out = Workbook()
     wb_out.remove(wb_out.active)
@@ -291,42 +356,11 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
     }
 
     for sheet_name in sheet_names:
-        r_ws_x = r_wb_x.sheet_by_name(sheet_name)
         s_df = s_df_all.get(sheet_name)
         ws = wb_out.create_sheet(sheet_name)
         ws.sheet_view.showGridLines = False
 
-        # Column widths
-        for c_idx in range(r_ws_x.ncols):
-            ci = r_ws_x.colinfo_map.get(c_idx)
-            if ci:
-                ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(ci.width / 256.0, 2)
-
-        # Row heights
-        for r_idx in range(r_ws_x.nrows):
-            ri = r_ws_x.rowinfo_map.get(r_idx)
-            if ri:
-                ws.row_dimensions[r_idx + 1].height = ri.height / 20.0
-
-        # Slave cells (non-top-left merged cells — read-only in openpyxl)
-        slave_cells: set[tuple[int, int]] = set()
-        for mc in r_ws_x.merged_cells:
-            r1, r2, c1, c2 = mc
-            for rr in range(r1, r2):
-                for cc in range(c1, c2):
-                    if rr != r1 or cc != c1:
-                        slave_cells.add((rr, cc))
-
-        # Apply merges
-        for mc in r_ws_x.merged_cells:
-            r1, r2, c1, c2 = mc
-            if r2 - r1 > 0 or c2 - c1 > 0:
-                ws.merge_cells(
-                    start_row=r1 + 1, start_column=c1 + 1,
-                    end_row=r2, end_column=c2,
-                )
-
-        # Build SICONFI numeric lookup
+        # Build SICONFI numeric lookup (same for both paths)
         sic_lookup: dict[tuple[int, int], float] = {}
         if s_df is not None:
             for ri in range(len(s_df)):
@@ -337,72 +371,192 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
 
         sheet_divs = 0
 
-        for r_idx in range(r_ws_x.nrows):
+        if _using_openpyxl:
+            # ── openpyxl path (rascunho BIFF8-obfuscated, converted via LibreOffice) ──
+            r_ws = r_wb_x[sheet_name]
+            ncols = r_ws.max_column or 0
+            nrows = r_ws.max_row or 0
+
+            for c_idx in range(ncols):
+                col_letter = get_column_letter(c_idx + 1)
+                dim = r_ws.column_dimensions.get(col_letter)
+                if dim and dim.width:
+                    ws.column_dimensions[col_letter].width = dim.width
+
+            for r_idx in range(nrows):
+                dim = r_ws.row_dimensions.get(r_idx + 1)
+                if dim and dim.height:
+                    ws.row_dimensions[r_idx + 1].height = dim.height
+
+            slave_cells: set[tuple[int, int]] = set()
+            for mc in r_ws.merged_cells.ranges:
+                r1 = mc.min_row - 1
+                r2 = mc.max_row
+                c1 = mc.min_col - 1
+                c2 = mc.max_col
+                for rr in range(r1, r2):
+                    for cc in range(c1, c2):
+                        if rr != r1 or cc != c1:
+                            slave_cells.add((rr, cc))
+            for mc in r_ws.merged_cells.ranges:
+                ws.merge_cells(str(mc))
+
+            for r_idx in range(nrows):
+                for c_idx in range(ncols):
+                    if (r_idx, c_idx) in slave_cells:
+                        continue
+
+                    cell = r_ws.cell(row=r_idx + 1, column=c_idx + 1)
+                    ox = ws.cell(row=r_idx + 1, column=c_idx + 1)
+
+                    val = cell.value if cell.value is not None else ""
+                    ox.value = val
+
+                    bg = _opxl_bg(cell)
+                    if bg:
+                        ox.fill = PatternFill("solid", fgColor=bg)
+
+                    fi = _opxl_font(cell)
+                    ox.font = Font(name=fi["name"], size=fi["size"],
+                                   bold=fi["bold"], italic=fi["italic"], color=fi["color"])
+
+                    ai = _opxl_align(cell)
+                    ox.alignment = Alignment(horizontal=ai["horizontal"],
+                                             vertical=ai["vertical"], wrap_text=ai["wrap"])
+
+                    fmt = _opxl_numfmt(cell)
+                    if fmt and fmt != "General":
+                        ox.number_format = fmt
+
+                    ox.border = _opxl_border(cell)
+
+                    msc_num = _to_num(val)
+                    sic_num = sic_lookup.get((r_idx, c_idx))
+
+                    if msc_num is not None or sic_num is not None:
+                        diff = (msc_num or 0) - (sic_num or 0)
+                        key = _classify(diff, msc_num, sic_num)
+                        if key:
+                            sheet_divs += 1
+                            stats["total_divergencias"] += 1
+                            stats["por_severidade"][key] += 1
+
+                            ox.fill = DIV_FILLS[key]
+                            ox.font = Font(name=fi["name"], size=fi["size"],
+                                           bold=True, italic=fi["italic"],
+                                           color=DIV_FONT_COLOR[key])
+
+                            msc_s = f"{msc_num:,.2f}" if msc_num is not None else "ausente"
+                            sic_s = f"{sic_num:,.2f}" if sic_num is not None else "ausente"
+                            diff_s = f"{diff:+,.2f}"
+                            pct_s = (
+                                f"{diff / sic_num * 100:+.2f}%"
+                                if sic_num and sic_num != 0 else "N/A"
+                            )
+                            txt = (
+                                f"⚠ DIVERGÊNCIA [{key}]\n"
+                                f"MSC Rascunho:  {msc_s}\n"
+                                f"SICONFI:       {sic_s}\n"
+                                f"Diferença:     {diff_s} ({pct_s})"
+                            )
+                            cmt = Comment(txt, "Kora Audit")
+                            cmt.width = 290
+                            cmt.height = 88
+                            ox.comment = cmt
+
+        else:
+            # ── xlrd path (rascunho normal, sem obfuscação) ──────────────
+            r_ws_x = r_wb_x.sheet_by_name(sheet_name)
+
             for c_idx in range(r_ws_x.ncols):
-                if (r_idx, c_idx) in slave_cells:
-                    continue
+                ci = r_ws_x.colinfo_map.get(c_idx)
+                if ci:
+                    ws.column_dimensions[get_column_letter(c_idx + 1)].width = max(ci.width / 256.0, 2)
 
-                cell_x = r_ws_x.cell(r_idx, c_idx)
-                xf_idx = r_ws_x.cell_xf_index(r_idx, c_idx)
-                ox = ws.cell(row=r_idx + 1, column=c_idx + 1)
+            for r_idx in range(r_ws_x.nrows):
+                ri = r_ws_x.rowinfo_map.get(r_idx)
+                if ri:
+                    ws.row_dimensions[r_idx + 1].height = ri.height / 20.0
 
-                # Value
-                val = cell_x.value if cell_x.ctype not in (0, 6) else None
-                ox.value = val
+            slave_cells: set[tuple[int, int]] = set()
+            for mc in r_ws_x.merged_cells:
+                r1, r2, c1, c2 = mc
+                for rr in range(r1, r2):
+                    for cc in range(c1, c2):
+                        if rr != r1 or cc != c1:
+                            slave_cells.add((rr, cc))
 
-                # Styling
-                bg = _xlrd_bg(r_wb_x, xf_idx)
-                if bg:
-                    ox.fill = PatternFill("solid", fgColor=bg)
+            for mc in r_ws_x.merged_cells:
+                r1, r2, c1, c2 = mc
+                if r2 - r1 > 0 or c2 - c1 > 0:
+                    ws.merge_cells(
+                        start_row=r1 + 1, start_column=c1 + 1,
+                        end_row=r2, end_column=c2,
+                    )
 
-                fi = _xlrd_font(r_wb_x, xf_idx)
-                ox.font = Font(name=fi["name"], size=fi["size"],
-                               bold=fi["bold"], italic=fi["italic"], color=fi["color"])
+            for r_idx in range(r_ws_x.nrows):
+                for c_idx in range(r_ws_x.ncols):
+                    if (r_idx, c_idx) in slave_cells:
+                        continue
 
-                ai = _xlrd_align(r_wb_x, xf_idx)
-                ox.alignment = Alignment(horizontal=ai["horizontal"],
-                                         vertical=ai["vertical"], wrap_text=ai["wrap"])
+                    cell_x = r_ws_x.cell(r_idx, c_idx)
+                    xf_idx = r_ws_x.cell_xf_index(r_idx, c_idx)
+                    ox = ws.cell(row=r_idx + 1, column=c_idx + 1)
 
-                fmt = _xlrd_numfmt(r_wb_x, xf_idx)
-                if fmt and fmt != "General":
-                    ox.number_format = fmt
+                    val = cell_x.value if cell_x.ctype not in (0, 6) else None
+                    ox.value = val
 
-                ox.border = _xlrd_border(r_wb_x, xf_idx)
+                    bg = _xlrd_bg(r_wb_x, xf_idx)
+                    if bg:
+                        ox.fill = PatternFill("solid", fgColor=bg)
 
-                # Divergence
-                msc_num = _to_num(val)
-                sic_num = sic_lookup.get((r_idx, c_idx))
+                    fi = _xlrd_font(r_wb_x, xf_idx)
+                    ox.font = Font(name=fi["name"], size=fi["size"],
+                                   bold=fi["bold"], italic=fi["italic"], color=fi["color"])
 
-                if msc_num is not None or sic_num is not None:
-                    diff = (msc_num or 0) - (sic_num or 0)
-                    key = _classify(diff, msc_num, sic_num)
-                    if key:
-                        sheet_divs += 1
-                        stats["total_divergencias"] += 1
-                        stats["por_severidade"][key] += 1
+                    ai = _xlrd_align(r_wb_x, xf_idx)
+                    ox.alignment = Alignment(horizontal=ai["horizontal"],
+                                             vertical=ai["vertical"], wrap_text=ai["wrap"])
 
-                        ox.fill = DIV_FILLS[key]
-                        ox.font = Font(name=fi["name"], size=fi["size"],
-                                       bold=True, italic=fi["italic"],
-                                       color=DIV_FONT_COLOR[key])
+                    fmt = _xlrd_numfmt(r_wb_x, xf_idx)
+                    if fmt and fmt != "General":
+                        ox.number_format = fmt
 
-                        msc_s = f"{msc_num:,.2f}" if msc_num is not None else "ausente"
-                        sic_s = f"{sic_num:,.2f}" if sic_num is not None else "ausente"
-                        diff_s = f"{diff:+,.2f}"
-                        pct_s = (
-                            f"{diff / sic_num * 100:+.2f}%"
-                            if sic_num and sic_num != 0 else "N/A"
-                        )
-                        txt = (
-                            f"⚠ DIVERGÊNCIA [{key}]\n"
-                            f"MSC Rascunho:  {msc_s}\n"
-                            f"SICONFI:       {sic_s}\n"
-                            f"Diferença:     {diff_s} ({pct_s})"
-                        )
-                        cmt = Comment(txt, "Kora Audit")
-                        cmt.width = 290
-                        cmt.height = 88
-                        ox.comment = cmt
+                    ox.border = _xlrd_border(r_wb_x, xf_idx)
+
+                    msc_num = _to_num(val)
+                    sic_num = sic_lookup.get((r_idx, c_idx))
+
+                    if msc_num is not None or sic_num is not None:
+                        diff = (msc_num or 0) - (sic_num or 0)
+                        key = _classify(diff, msc_num, sic_num)
+                        if key:
+                            sheet_divs += 1
+                            stats["total_divergencias"] += 1
+                            stats["por_severidade"][key] += 1
+
+                            ox.fill = DIV_FILLS[key]
+                            ox.font = Font(name=fi["name"], size=fi["size"],
+                                           bold=True, italic=fi["italic"],
+                                           color=DIV_FONT_COLOR[key])
+
+                            msc_s = f"{msc_num:,.2f}" if msc_num is not None else "ausente"
+                            sic_s = f"{sic_num:,.2f}" if sic_num is not None else "ausente"
+                            diff_s = f"{diff:+,.2f}"
+                            pct_s = (
+                                f"{diff / sic_num * 100:+.2f}%"
+                                if sic_num and sic_num != 0 else "N/A"
+                            )
+                            txt = (
+                                f"⚠ DIVERGÊNCIA [{key}]\n"
+                                f"MSC Rascunho:  {msc_s}\n"
+                                f"SICONFI:       {sic_s}\n"
+                                f"Diferença:     {diff_s} ({pct_s})"
+                            )
+                            cmt = Comment(txt, "Kora Audit")
+                            cmt.width = 290
+                            cmt.height = 88
+                            ox.comment = cmt
 
         stats["por_anexo"][sheet_name] = sheet_divs
 
