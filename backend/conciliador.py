@@ -155,8 +155,9 @@ def _open_xls(path: str):
     import msoffcrypto
     buf = io.BytesIO(raw)
     office = msoffcrypto.OfficeFile(buf)
+    office.load_key(password="")
     out = io.BytesIO()
-    office.decrypt("", out)
+    office.decrypt(out)
     out.seek(0)
     return xlrd.open_workbook(file_contents=out.read(), formatting_info=True)
 
@@ -252,8 +253,9 @@ def conciliar(rascunho_path: str, homologado_path: str, output_path: str) -> dic
         with open(homologado_path, "rb") as f:
             buf = io.BytesIO(f.read())
         office = msoffcrypto.OfficeFile(buf)
+        office.load_key(password="")
         out = io.BytesIO()
-        office.decrypt("", out)
+        office.decrypt(out)
         out.seek(0)
         s_df_all = pd.read_excel(out, engine=engine_h, sheet_name=None, header=None)
 
