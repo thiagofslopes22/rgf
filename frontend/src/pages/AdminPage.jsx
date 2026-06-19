@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import { UserPlus, PowerOff, Shield, User, AlertCircle, Building2, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { UserPlus, PowerOff, Shield, User, AlertCircle, Building2, ChevronDown, Check, X } from 'lucide-react'
 import { api } from '../lib/api'
 import './AdminPage.css'
 
-const EMPTY_FORM = { nome: '', email: '', senha: '', role: 'auditor', prefeitura_id: '' }
+const EMPTY_FORM = { nome: '', email: '', senha: '', role: 'auditor', prefeitura_ids: [] }
 
 export default function AdminPage() {
   const [users, setUsers] = useState([])
@@ -14,6 +14,7 @@ export default function AdminPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
 
   async function fetchUsers() {
     setLoading(true)
@@ -30,6 +31,26 @@ export default function AdminPage() {
     api.get('/prefeituras').then(r => r.ok ? r.json() : []).then(setPrefeituras).catch(() => {})
   }, [])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function togglePrefeitura(id) {
+    setForm(f => ({
+      ...f,
+      prefeitura_ids: f.prefeitura_ids.includes(id)
+        ? f.prefeitura_ids.filter(x => x !== id)
+        : [...f.prefeitura_ids, id],
+    }))
+  }
+
   async function handleCreate(e) {
     e.preventDefault()
     setFormError('')
@@ -40,7 +61,7 @@ export default function AdminPage() {
         email: form.email,
         senha: form.senha,
         role: form.role,
-        prefeitura_id: form.role === 'auditor' ? (Number(form.prefeitura_id) || null) : null,
+        prefeitura_ids: form.role === 'auditor' ? form.prefeitura_ids : [],
       }
       const res = await api.post('/auth/usuarios', payload)
       if (!res.ok) {
@@ -67,9 +88,9 @@ export default function AdminPage() {
     }
   }
 
-  const selectedPref = prefeituras.find(p => p.id === Number(form.prefeitura_id)) || null
+  const selectedPrefs = prefeituras.filter(p => form.prefeitura_ids.includes(p.id))
   const formValid = form.nome.trim() && form.email.trim() && form.senha.trim() &&
-    (form.role !== 'auditor' || form.prefeitura_id)
+    (form.role !== 'auditor' || form.prefeitura_ids.length > 0)
 
   return (
     <div className="admin-page">
@@ -125,7 +146,7 @@ export default function AdminPage() {
                 <select
                   className="admin-select"
                   value={form.role}
-                  onChange={e => setForm(f => ({ ...f, role: e.target.value, prefeitura_id: '' }))}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value, prefeitura_ids: [] }))}
                 >
                   <option value="auditor">Auditor</option>
                   <option value="admin">Administrador</option>
@@ -133,48 +154,72 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Prefeitura selector — only for auditors */}
+            {/* Multi-select prefeituras — only for auditors */}
             {form.role === 'auditor' && (
-              <div className="admin-field admin-field--prefeitura">
+              <div className="admin-field admin-field--prefeitura" ref={dropdownRef}>
                 <label className="admin-label">
                   <Building2 size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                  Prefeitura
-                  <span style={{ color: 'var(--danger, #ef4444)', marginLeft: 2 }}>*</span>
+                  Prefeituras
+                  <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>
                 </label>
-                <div className="admin-pref-wrap" style={{ position: 'relative' }}>
+                <div style={{ position: 'relative' }}>
                   <button
                     type="button"
-                    className={`admin-pref-trigger ${selectedPref ? 'admin-pref-trigger--selected' : ''}`}
+                    className={`admin-pref-trigger ${selectedPrefs.length > 0 ? 'admin-pref-trigger--selected' : ''}`}
                     onClick={() => setDropdownOpen(o => !o)}
                   >
                     <span className="admin-pref-label">
-                      {selectedPref ? selectedPref.nome : 'Selecionar prefeitura…'}
+                      {selectedPrefs.length === 0
+                        ? 'Selecionar prefeituras…'
+                        : selectedPrefs.length === 1
+                          ? selectedPrefs[0].nome
+                          : `${selectedPrefs.length} prefeituras selecionadas`}
                     </span>
-                    <ChevronDown size={13} />
+                    <ChevronDown size={13} className={dropdownOpen ? 'chevron-open' : ''} />
                   </button>
+
                   {dropdownOpen && (
                     <div className="admin-pref-dropdown">
                       {prefeituras.length === 0 ? (
                         <div className="admin-pref-empty">Nenhuma prefeitura cadastrada</div>
                       ) : (
-                        prefeituras.map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className={`admin-pref-option ${Number(form.prefeitura_id) === p.id ? 'admin-pref-option--active' : ''}`}
-                            onClick={() => {
-                              setForm(f => ({ ...f, prefeitura_id: String(p.id) }))
-                              setDropdownOpen(false)
-                            }}
-                          >
-                            <span className="admin-pref-nome">{p.nome}</span>
-                            <span className="admin-pref-mun">{p.municipio} · {p.uf}</span>
-                          </button>
-                        ))
+                        prefeituras.map(p => {
+                          const checked = form.prefeitura_ids.includes(p.id)
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className={`admin-pref-option ${checked ? 'admin-pref-option--active' : ''}`}
+                              onClick={() => togglePrefeitura(p.id)}
+                            >
+                              <div className={`admin-pref-check ${checked ? 'admin-pref-check--on' : ''}`}>
+                                {checked && <Check size={10} />}
+                              </div>
+                              <div>
+                                <span className="admin-pref-nome">{p.nome}</span>
+                                <span className="admin-pref-mun">{p.municipio} · {p.uf}</span>
+                              </div>
+                            </button>
+                          )
+                        })
                       )}
                     </div>
                   )}
                 </div>
+
+                {/* Selected tags */}
+                {selectedPrefs.length > 0 && (
+                  <div className="admin-pref-tags">
+                    {selectedPrefs.map(p => (
+                      <span key={p.id} className="admin-pref-tag">
+                        {p.nome}
+                        <button type="button" onClick={() => togglePrefeitura(p.id)}>
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -213,7 +258,7 @@ export default function AdminPage() {
                   <th>Usuário</th>
                   <th>E-mail</th>
                   <th>Perfil</th>
-                  <th>Prefeitura</th>
+                  <th>Prefeituras</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -232,12 +277,16 @@ export default function AdminPage() {
                         {u.role === 'admin' ? 'Administrador' : 'Auditor'}
                       </span>
                     </td>
-                    <td className="admin-td-prefeitura">
-                      {u.prefeitura_nome ? (
-                        <span className="admin-pref-badge">
-                          <Building2 size={11} />
-                          {u.prefeitura_nome}
-                        </span>
+                    <td className="admin-td-prefeituras">
+                      {u.prefeituras && u.prefeituras.length > 0 ? (
+                        <div className="admin-pref-list">
+                          {u.prefeituras.map(p => (
+                            <span key={p.id} className="admin-pref-badge">
+                              {p.nome}
+                              <span className="admin-pref-uf">{p.uf}</span>
+                            </span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="admin-pref-none">—</span>
                       )}

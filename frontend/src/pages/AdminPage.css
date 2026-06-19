@@ -274,11 +274,11 @@
 .admin-btn-toggle--on:hover  { border-color: #86EFAC; color: #16A34A; background: #F0FDF4; }
 .admin-btn-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ─── Prefeitura selector (in user form) ───────────── */
+/* ─── Prefeitura multi-select (in user form) ─────── */
 .admin-field--prefeitura { min-width: 200px; flex: 1.5; }
 
 .admin-pref-trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -299,6 +299,7 @@
 .admin-pref-trigger:hover { border-color: var(--text-3); }
 
 .admin-pref-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+.chevron-open { transform: rotate(180deg); transition: transform 0.15s; }
 
 .admin-pref-dropdown {
   position: absolute;
@@ -310,15 +311,14 @@
   border-radius: var(--radius-sm);
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   z-index: 100;
-  max-height: 200px;
+  max-height: 210px;
   overflow-y: auto;
 }
 
 .admin-pref-option {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   padding: 8px 12px;
   border: none;
@@ -330,28 +330,91 @@
 .admin-pref-option:hover { background: var(--surface-2); }
 .admin-pref-option--active { background: var(--gold-faint, #FAF3DC); }
 
-.admin-pref-nome { font-size: 13px; font-weight: 500; color: var(--text); }
-.admin-pref-mun  { font-size: 11px; color: var(--text-3); }
+.admin-pref-check {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  transition: background 0.1s, border-color 0.1s;
+}
+.admin-pref-check--on {
+  background: var(--gold, #C9A84C);
+  border-color: var(--gold, #C9A84C);
+  color: #fff;
+}
+
+.admin-pref-nome { font-size: 13px; font-weight: 500; color: var(--text); display: block; }
+.admin-pref-mun  { font-size: 11px; color: var(--text-3); display: block; }
 .admin-pref-empty { padding: 12px; font-size: 12px; color: var(--text-3); text-align: center; }
 
-/* ─── Prefeitura badge in users table ──────────────── */
-.admin-td-prefeitura { max-width: 160px; }
+/* Selected tags */
+.admin-pref-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
 
-.admin-pref-badge {
+.admin-pref-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: 11.5px;
   font-weight: 500;
   color: var(--text-2);
+  background: var(--gold-faint, #FAF3DC);
+  border: 1px solid var(--gold-light, #EDD98A);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.admin-pref-tag button {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  padding: 0;
+  line-height: 1;
+}
+.admin-pref-tag button:hover { color: #ef4444; }
+
+/* ─── Prefeituras column in users table ─────────────── */
+.admin-td-prefeituras { max-width: 220px; }
+
+.admin-pref-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-pref-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
+}
+
+.admin-pref-uf {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding-left: 3px;
+  border-left: 1px solid var(--border);
+  margin-left: 2px;
 }
 
 .admin-pref-none { color: var(--text-3); font-size: 12px; }

@@ -1,7 +1,16 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, Table
 from sqlalchemy.orm import relationship
 from database import Base
+
+
+# Many-to-many: um usuário pode pertencer a várias prefeituras
+usuario_prefeituras = Table(
+    "usuario_prefeituras",
+    Base.metadata,
+    Column("usuario_id", Integer, ForeignKey("usuarios.id"), primary_key=True),
+    Column("prefeitura_id", Integer, ForeignKey("prefeituras.id"), primary_key=True),
+)
 
 
 class Usuario(Base):
@@ -14,9 +23,8 @@ class Usuario(Base):
     role = Column(String(50), default="auditor")  # admin / auditor
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
-    prefeitura_id = Column(Integer, ForeignKey("prefeituras.id"), nullable=True)
 
-    prefeitura = relationship("Prefeitura", foreign_keys=[prefeitura_id])
+    prefeituras = relationship("Prefeitura", secondary=usuario_prefeituras)
 
 
 class Prefeitura(Base):
