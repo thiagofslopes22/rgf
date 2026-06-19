@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, PowerOff, Shield, User, AlertCircle } from 'lucide-react'
+import { UserPlus, PowerOff, Shield, User, AlertCircle, Building2, ChevronDown } from 'lucide-react'
 import { api } from '../lib/api'
 import './AdminPage.css'
 
-const EMPTY_FORM = { nome: '', email: '', senha: '', role: 'auditor' }
+const EMPTY_FORM = { nome: '', email: '', senha: '', role: 'auditor', prefeitura_id: '' }
 
 export default function AdminPage() {
   const [users, setUsers] = useState([])
+  const [prefeituras, setPrefeituras] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const [togglingId, setTogglingId] = useState(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   async function fetchUsers() {
     setLoading(true)
@@ -23,19 +25,30 @@ export default function AdminPage() {
     }
   }
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => {
+    fetchUsers()
+    api.get('/prefeituras').then(r => r.ok ? r.json() : []).then(setPrefeituras).catch(() => {})
+  }, [])
 
   async function handleCreate(e) {
     e.preventDefault()
     setFormError('')
     setFormLoading(true)
     try {
-      const res = await api.post('/auth/usuarios', form)
+      const payload = {
+        nome: form.nome,
+        email: form.email,
+        senha: form.senha,
+        role: form.role,
+        prefeitura_id: form.role === 'auditor' ? (Number(form.prefeitura_id) || null) : null,
+      }
+      const res = await api.post('/auth/usuarios', payload)
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.detail || 'Erro ao criar usuário')
       }
       setForm(EMPTY_FORM)
+      setDropdownOpen(false)
       await fetchUsers()
     } catch (e) {
       setFormError(e.message)
@@ -54,7 +67,9 @@ export default function AdminPage() {
     }
   }
 
-  const formValid = form.nome.trim() && form.email.trim() && form.senha.trim()
+  const selectedPref = prefeituras.find(p => p.id === Number(form.prefeitura_id)) || null
+  const formValid = form.nome.trim() && form.email.trim() && form.senha.trim() &&
+    (form.role !== 'auditor' || form.prefeitura_id)
 
   return (
     <div className="admin-page">
@@ -110,13 +125,59 @@ export default function AdminPage() {
                 <select
                   className="admin-select"
                   value={form.role}
-                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value, prefeitura_id: '' }))}
                 >
                   <option value="auditor">Auditor</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
             </div>
+
+            {/* Prefeitura selector — only for auditors */}
+            {form.role === 'auditor' && (
+              <div className="admin-field admin-field--prefeitura">
+                <label className="admin-label">
+                  <Building2 size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                  Prefeitura
+                  <span style={{ color: 'var(--danger, #ef4444)', marginLeft: 2 }}>*</span>
+                </label>
+                <div className="admin-pref-wrap" style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className={`admin-pref-trigger ${selectedPref ? 'admin-pref-trigger--selected' : ''}`}
+                    onClick={() => setDropdownOpen(o => !o)}
+                  >
+                    <span className="admin-pref-label">
+                      {selectedPref ? selectedPref.nome : 'Selecionar prefeitura…'}
+                    </span>
+                    <ChevronDown size={13} />
+                  </button>
+                  {dropdownOpen && (
+                    <div className="admin-pref-dropdown">
+                      {prefeituras.length === 0 ? (
+                        <div className="admin-pref-empty">Nenhuma prefeitura cadastrada</div>
+                      ) : (
+                        prefeituras.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className={`admin-pref-option ${Number(form.prefeitura_id) === p.id ? 'admin-pref-option--active' : ''}`}
+                            onClick={() => {
+                              setForm(f => ({ ...f, prefeitura_id: String(p.id) }))
+                              setDropdownOpen(false)
+                            }}
+                          >
+                            <span className="admin-pref-nome">{p.nome}</span>
+                            <span className="admin-pref-mun">{p.municipio} · {p.uf}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               className="admin-btn-create"
               type="submit"
@@ -152,6 +213,7 @@ export default function AdminPage() {
                   <th>Usuário</th>
                   <th>E-mail</th>
                   <th>Perfil</th>
+                  <th>Prefeitura</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -169,6 +231,16 @@ export default function AdminPage() {
                         {u.role === 'admin' ? <Shield size={11} /> : <User size={11} />}
                         {u.role === 'admin' ? 'Administrador' : 'Auditor'}
                       </span>
+                    </td>
+                    <td className="admin-td-prefeitura">
+                      {u.prefeitura_nome ? (
+                        <span className="admin-pref-badge">
+                          <Building2 size={11} />
+                          {u.prefeitura_nome}
+                        </span>
+                      ) : (
+                        <span className="admin-pref-none">—</span>
+                      )}
                     </td>
                     <td>
                       <span className={`admin-status ${u.ativo ? 'admin-status--ativo' : 'admin-status--inativo'}`}>

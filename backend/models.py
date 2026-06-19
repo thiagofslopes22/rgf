@@ -14,6 +14,9 @@ class Usuario(Base):
     role = Column(String(50), default="auditor")  # admin / auditor
     ativo = Column(Boolean, default=True)
     criado_em = Column(DateTime, default=datetime.utcnow)
+    prefeitura_id = Column(Integer, ForeignKey("prefeituras.id"), nullable=True)
+
+    prefeitura = relationship("Prefeitura", foreign_keys=[prefeitura_id])
 
 
 class Prefeitura(Base):

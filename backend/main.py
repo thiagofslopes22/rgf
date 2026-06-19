@@ -27,24 +27,25 @@ app.add_middleware(
 JOBS: dict[str, dict] = {}
 
 
-def _add_column_if_missing(conn, col: str, definition: str):
-    """Adds a column to conciliacoes if it doesn't already exist (SQLite + PostgreSQL safe)."""
+def _add_column_if_missing(conn, table: str, col: str, definition: str):
+    """Adds a column to a table if it doesn't already exist (SQLite + PostgreSQL safe)."""
     import sqlalchemy as sa
     if engine.dialect.name == "sqlite":
-        existing = [r[1] for r in conn.execute(sa.text("PRAGMA table_info(conciliacoes)")).fetchall()]
+        existing = [r[1] for r in conn.execute(sa.text(f"PRAGMA table_info({table})")).fetchall()]
         if col in existing:
             return
-        conn.execute(sa.text(f"ALTER TABLE conciliacoes ADD COLUMN {col} {definition}"))
+        conn.execute(sa.text(f"ALTER TABLE {table} ADD COLUMN {col} {definition}"))
     else:
-        conn.execute(sa.text(f"ALTER TABLE conciliacoes ADD COLUMN IF NOT EXISTS {col} {definition}"))
+        conn.execute(sa.text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {definition}"))
 
 
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
-        _add_column_if_missing(conn, "arquivado", "BOOLEAN DEFAULT FALSE")
-        _add_column_if_missing(conn, "arquivo_auditoria", "VARCHAR(255)")
+        _add_column_if_missing(conn, "conciliacoes", "arquivado", "BOOLEAN DEFAULT FALSE")
+        _add_column_if_missing(conn, "conciliacoes", "arquivo_auditoria", "VARCHAR(255)")
+        _add_column_if_missing(conn, "usuarios", "prefeitura_id", "INTEGER")
         conn.commit()
     db = SessionLocal()
     try:
@@ -66,6 +67,7 @@ class UserCreateRequest(BaseModel):
     email: str
     senha: str
     role: str = "auditor"
+    prefeitura_id: Optional[int] = None
 
 class PrefeituraCreate(BaseModel):
     nome: str
@@ -101,6 +103,7 @@ def me(current_user: Usuario = Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role,
         "ativo": current_user.ativo,
+        "prefeitura_id": current_user.prefeitura_id,
     }
 
 
@@ -115,6 +118,8 @@ def list_users(current_user: Usuario = Depends(require_admin), db: Session = Dep
             "role": u.role,
             "ativo": u.ativo,
             "criado_em": u.criado_em.isoformat(),
+            "prefeitura_id": u.prefeitura_id,
+            "prefeitura_nome": u.prefeitura.nome if u.prefeitura else None,
         }
         for u in users
     ]
@@ -128,17 +133,27 @@ def create_user_endpoint(
 ):
     if db.query(Usuario).filter(Usuario.email == body.email).first():
         raise HTTPException(status_code=400, detail="Email já cadastrado")
+    if body.role == "auditor" and not body.prefeitura_id:
+        raise HTTPException(status_code=400, detail="Auditor precisa estar vinculado a uma prefeitura")
+    if body.prefeitura_id:
+        pref = db.query(Prefeitura).filter(Prefeitura.id == body.prefeitura_id).first()
+        if not pref:
+            raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
     user = Usuario(
         nome=body.nome,
         email=body.email,
         senha_hash=hash_password(body.senha),
         role=body.role,
         ativo=True,
+        prefeitura_id=body.prefeitura_id if body.role == "auditor" else None,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"id": user.id, "nome": user.nome, "email": user.email, "role": user.role, "ativo": user.ativo}
+    return {
+        "id": user.id, "nome": user.nome, "email": user.email,
+        "role": user.role, "ativo": user.ativo, "prefeitura_id": user.prefeitura_id,
+    }
 
 
 @app.patch("/auth/usuarios/{user_id}/toggle")
@@ -194,6 +209,9 @@ def list_prefeituras(
     q = db.query(Prefeitura)
     if ativo is not None:
         q = q.filter(Prefeitura.ativo == ativo)
+    # Auditors only see their own prefeitura
+    if current_user.role != "admin" and current_user.prefeitura_id:
+        q = q.filter(Prefeitura.id == current_user.prefeitura_id)
     return [_prefeitura_dict(p) for p in q.order_by(Prefeitura.nome).all()]
 
 
@@ -271,6 +289,8 @@ async def conciliar_endpoint(
     ).first()
     if not prefeitura:
         raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
+    if current_user.role != "admin" and current_user.prefeitura_id != prefeitura_id:
+        raise HTTPException(status_code=403, detail="Sem acesso a esta prefeitura")
 
     job_id = str(uuid.uuid4())
     tmp_dir = tempfile.mkdtemp()
@@ -358,6 +378,8 @@ async def conciliar_rreo_endpoint(
     ).first()
     if not prefeitura:
         raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
+    if current_user.role != "admin" and current_user.prefeitura_id != prefeitura_id:
+        raise HTTPException(status_code=403, detail="Sem acesso a esta prefeitura")
 
     for upload in (rascunho_msc, siconfi_homologado):
         ext = os.path.splitext(upload.filename or "")[1].lower()
