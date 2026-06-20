@@ -254,7 +254,9 @@ def delete_prefeitura(
     p = db.query(Prefeitura).filter(Prefeitura.id == prefeitura_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Prefeitura não encontrada")
+    import sqlalchemy as sa
     db.query(Conciliacao).filter(Conciliacao.prefeitura_id == prefeitura_id).delete()
+    db.execute(sa.text("DELETE FROM usuario_prefeituras WHERE prefeitura_id = :pid"), {"pid": prefeitura_id})
     db.delete(p)
     db.commit()
 

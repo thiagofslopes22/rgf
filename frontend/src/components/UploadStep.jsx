@@ -4,8 +4,10 @@ import { FileSpreadsheet, Upload, X, ArrowRight, Info, Building2, ChevronDown } 
 import './UploadStep.css'
 
 function FileZone({ label, subtitle, file, onFile, onClear }) {
-  const onDrop = useCallback((accepted) => {
-    if (accepted[0]) onFile(accepted[0])
+  const onDrop = useCallback((accepted, rejected) => {
+    // accepted[] vem quando MIME bate; rejected[] quando MIME não bate mas extensão bate
+    const file = accepted[0] ?? rejected.find(r => /\.(xls|xlsx)$/i.test(r.file.name))?.file
+    if (file) onFile(file)
   }, [onFile])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -13,6 +15,12 @@ function FileZone({ label, subtitle, file, onFile, onClear }) {
     accept: {
       'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/octet-stream': ['.xls', '.xlsx'],
+      'application/zip': ['.xlsx'],
+      'application/x-zip-compressed': ['.xlsx'],
+      'application/msexcel': ['.xls'],
+      'application/x-msexcel': ['.xls'],
+      'application/x-excel': ['.xls'],
     },
     multiple: false,
   })

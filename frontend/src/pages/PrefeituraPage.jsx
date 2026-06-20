@@ -93,7 +93,14 @@ export default function PrefeituraPage() {
       if (res.ok || res.status === 204) {
         setConfirmDeleteId(null)
         await fetchPrefeituras()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setFormError(data.detail || 'Erro ao excluir prefeitura.')
+        setConfirmDeleteId(null)
       }
+    } catch {
+      setFormError('Erro de conexão ao tentar excluir.')
+      setConfirmDeleteId(null)
     } finally {
       setDeletingId(null)
     }
