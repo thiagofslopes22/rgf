@@ -62,9 +62,10 @@ def _to_num(val):
 
 def _classify(diff: float, msc: float | None, sic: float | None) -> str | None:
     if msc is None and sic is not None:
-        return "AUSENTE"
+        # Só é ausência real se o outro lado tem valor != 0
+        return "AUSENTE" if sic != 0 else None
     if sic is None and msc is not None:
-        return "AUSENTE"
+        return "AUSENTE" if msc != 0 else None
     if abs(diff) < 0.005:
         return None
     if abs(diff) < 0.01:
